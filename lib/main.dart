@@ -1,8 +1,16 @@
+
+
+import 'package:PersonalAssistantApp/Models/GetRequests.dart';
+import 'package:PersonalAssistantApp/Models/Responses/ScheduleGetResponse.dart';
 import 'package:flutter/material.dart';
-import 'package:quinoa/calendar.dart';
-import 'package:quinoa/createTask.dart';
-import 'package:quinoa/dashboard.dart';
-import 'package:quinoa/miniapps.dart';
+import 'View/calendar.dart';
+import 'View/createTask.dart';
+import 'View/dashboard.dart';
+import 'View/miniapps.dart';
+import 'Models/Event.dart';
+import 'package:PersonalAssistantApp/Global.dart';
+
+import 'package:toast/toast.dart';
 
 void main() {
   runApp(
@@ -19,18 +27,22 @@ class CorePage extends StatefulWidget {
 }
 
 class CorePageState extends State<CorePage> {
+  
   int _currentDisplayIndex = 0;
   List<Widget> screens = [MyHomePage(), CalendarPage(), DashboardPage(), MiniApps()];
+
+  void onTapNav(int index) {
+    setState(() { _currentDisplayIndex = index; });
+  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         bottomNavigationBar: BottomNavigationBar(
-          onTap: (int index) {
-            setState(() { _currentDisplayIndex = index; });
-
-          },
+          onTap:  (int i) => onTapNav(i),
         type : BottomNavigationBarType.fixed,
+        
         backgroundColor: Colors.grey[900],
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.grey[300],
@@ -66,8 +78,14 @@ class MyHomePage extends StatefulWidget {
  List<Color> sequence = [Colors.blue, Colors.teal, Colors.orange, Colors.green];
 
 class _MyHomePageState extends State<MyHomePage> { 
+TextEditingController controller = TextEditingController();
+ void initState() {
+   super.initState();
+//    print("getting events");
+    Global.getEvents();
+ }
 
- 
+
 
   @override
   Widget build(BuildContext context) {
@@ -93,7 +111,16 @@ class _MyHomePageState extends State<MyHomePage> {
         ],
       ),
       body: Container(
-        child: ListView.builder(itemBuilder: (context, index) {
+        child: _loadMainPageScaffold(context, Global.schedule)
+      ),
+      
+    );
+  }
+
+  Widget _generateListViewLoading(BuildContext context) {
+    return ListView.builder(
+
+        itemBuilder: (context, index) {
           if (index == 0) {
             return _generateWelcomeMessage('Yash T');
           } else if (index == 1) {
@@ -104,25 +131,96 @@ class _MyHomePageState extends State<MyHomePage> {
             return _generateSuggestionsView();
           } else if (index == 4) {
             return _generateEventsHeader();
-          } else if (index == 5) {
-            return generateEventsCard(
-                'Hackathon Planning Meeting',
-                '4:00 PM',
-                'Discussing what we need to do for Hack the North and planning some epic project ideas',
-                ['Aaditya Chaudhary', "Desgroup Whatley", 'Lunarcoffee Gao'], sequence[index%4], '2 hours');
-        } else if (index == 6) {
-            return generateEventsCard(
-                'Planning Adi\'s Destruction',
-                '6:30 PM',
-                'Discussing how to destroy Adi\'s entire career before it even started',
-                [ "Desgroup Whatley", 'Lunarcoffee Gao'], sequence[index%4], '1 hour');
           }
-        }),
-      ),
-      
-    );
-  }
+          else {
+              return CircularProgressIndicator();
+          }
 
+        });
+  }
+  Widget _generateListViewSuccess(BuildContext context, List<Event> events) {
+    if(Global.events.length != events.length) {
+        Global.events = events;
+    }
+    var len = events.length;
+    if(events.length == 0) {
+      len = 1;
+    }
+
+    return ListView.builder(
+        itemCount: len + 5,
+        itemBuilder: (context, index) {
+
+          if (index == 0) {
+            return _generateWelcomeMessage('Yash T');
+          } else if (index == 1) {
+            return _generateTextBox();
+          } else if (index == 2) {
+            return _generateSuggestionsHeader();
+          } else if (index == 3) {
+            return _generateSuggestionsView();
+          } else if (index == 4) {
+            return _generateEventsHeader();
+          }
+          else {
+            if(events.length == 0) {
+                return  Text("Seems Like You Haven't Scheduled Anything",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white
+                    ));
+            } else {
+              var time = events[index-5].startTime;
+              return generateEventsCard(events[index-5].action,
+                  "${time.hour < 13 ? time.hour : time.hour % 12}:${time.minute < 10 ? 0 : ''}${time.minute} ${time.hour < 13 ? 'AM' : 'PM'}",
+                  "",
+                  events[index-5].getTagsList(),
+                  sequence[(index-5)%4],
+                  (events[index-5].length.toString() + " minutes")
+              );
+            }
+
+
+
+
+          }
+
+        });
+  }
+  Widget _generateListViewFailed(BuildContext context, String err) {
+    return ListView.builder(
+
+        itemBuilder: (context, index) {
+
+          if (index == 0) {
+            return _generateWelcomeMessage('Yash T');
+          } else if (index == 1) {
+            return _generateTextBox();
+          } else if (index == 2) {
+            return _generateSuggestionsHeader();
+          } else if (index == 3) {
+            return _generateSuggestionsView();
+          } else if (index == 4) {
+            return _generateEventsHeader();
+          }
+          else {
+            return Text(err);
+          }
+//            return generateEventsCard(
+//                'Hackathon Planning Meeting',
+//                '4:00 PM',
+//                'Discussing what we need to do for Hack the North and planning some epic project ideas',
+//                ['Aaditya Chaudhary', "Desgroup Whatley", 'Lunarcoffee Gao'], sequence[index%4], '2 hours');
+//        } else if (index == 6) {
+//            return generateEventsCard(
+//                'Planning Adi\'s Destruction',
+//                '6:30 PM',
+//                'Discussing how to destroy Adi\'s entire career before it even started',
+//                [ "Desgroup Whatley", 'Lunarcoffee Gao'], sequence[index%4], '1 hour');
+//          }
+        });
+  }
+  
   Widget _generateWelcomeMessage(String name) {
     return Container(
       height: 100,
@@ -142,7 +240,7 @@ class _MyHomePageState extends State<MyHomePage> {
           Container(
             padding: EdgeInsets.fromLTRB(20, 10, 20, 0),
             child: Text(
-              'Friday, June 5, 2020',
+              'Friday, June 7, 2020',
               style: TextStyle(fontSize: 20, color: Colors.white70),
             ),
           ),
@@ -152,6 +250,12 @@ class _MyHomePageState extends State<MyHomePage> {
   }
   bool switched = false;
 
+ void onChanged(String text) {
+    if (!switched) {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => CreateTaskPage(controller)));
+    }
+ }
+  
   Widget _generateTextBox() {
     return Hero(
       tag: 'TXT',
@@ -162,11 +266,8 @@ class _MyHomePageState extends State<MyHomePage> {
           color: Colors.grey[800],
           borderRadius: BorderRadius.all(Radius.circular(10))),
         child: TextField(
-          onChanged: (text) {
-            if (!switched) {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => CreateTaskPage()));
-            }
-          },
+          controller: controller,
+          onChanged: (text) => onChanged(text),
         style: TextStyle(color: Colors.white),
         decoration: InputDecoration(
           fillColor: Colors.grey[800],
@@ -224,8 +325,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Widget _generateSuggestionCard(
-      String title, String info, Color color, IconData icon) {
+  Widget _generateSuggestionCard(String title, String info, Color color, IconData icon) {
     return Container(
       height: 150,
       width: 150,
@@ -275,12 +375,27 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  
+ Widget _loadMainPageScaffold(BuildContext context, Future<ScheduleGetResponse> schedule) {
+   return FutureBuilder<ScheduleGetResponse>(
+     future: schedule,
+     builder: (context,snapshot) {
+       if (snapshot.hasData ) {
+//         print("success");
+//         print("data length: " + snapshot.data.events.length.toString());
+
+         return _generateListViewSuccess(context, snapshot.data.events);
+       } else if(snapshot.hasError) {
+         return _generateListViewFailed(context, snapshot.error.toString());
+       } else {
+         return _generateListViewLoading(context);
+       }
+     },
+   );
+ }
 
 }
 
-Widget generateEventsCard(
-      String title, String time, String note, List<String> participants, Color color, String duration) {
+Widget generateEventsCard(String title, String time, String note, List<String> participants, Color color, String duration) {
     return Container(
       margin: EdgeInsets.fromLTRB(0, 0, 0, 30),
         height: 180,
@@ -340,7 +455,7 @@ Widget generateEventsCard(
                     ),
                     participants.length == 0
                         ? Text(
-                            'Three hours left',
+                            '',
                             style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -395,3 +510,23 @@ Widget generateEventsCard(
       child: Center(child: Text(name, style: TextStyle(color: Colors.white),),)
     );
   }
+
+  Widget generateCardList(BuildContext context, List<Event> events) {
+
+      return ListView.builder(
+        shrinkWrap: true,
+        itemCount: events.length,
+          itemBuilder: (context,index) {
+            return generateEventsCard(
+                events[index].action,
+                events[index].startTime.hour.toString(),
+                "",
+                events[index].getTagsList(),
+                sequence[index%4],
+                events[index].length.toString());
+          }
+      );
+  }
+
+
+
